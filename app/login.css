@@ -1,0 +1,289 @@
+.login {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ===== 左侧品牌区 ===== */
+.login-brand {
+  position: relative;
+  flex: 1 1 50%;
+  min-height: 100vh;
+  background-image: linear-gradient(rgba(30, 23, 20, 0.6), rgba(30, 23, 20, 0.6)),
+    url("/assets/2_5/41.png");
+  background-size: cover;
+  background-position: center;
+  color: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 64px;
+}
+
+.login-brand__logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-brand__logoMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--gold);
+  border-radius: 50%;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.login-brand__logoText {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.login-brand__slogan {
+  margin: auto 0;
+}
+
+.login-brand__slogan h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(28px, 2.8vw, 40px);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.login-brand__slogan p {
+  margin-top: 24px;
+  font-size: 16px;
+  font-weight: 300;
+  color: var(--line);
+}
+
+.login-brand__copyright {
+  font-size: 12px;
+  color: var(--line);
+  opacity: 0.6;
+}
+
+/* ===== 右侧登录表单 ===== */
+.login-panel {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-form__head {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-form__logoMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(30, 23, 20, 0.13);
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.login-form__head h2 {
+  margin-top: 12px;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.login-form__head p {
+  margin-top: 4px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gold);
+}
+
+.login-form__error {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #fbeeec;
+  border: 1px solid #e5b3ab;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #b4453a;
+}
+
+.login-form__field {
+  margin-bottom: 18px;
+}
+
+.login-form__field label {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-form__inputWrap {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 14px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.login-form__inputWrap:focus-within {
+  border-color: var(--gold);
+}
+
+.login-form__inputWrap input {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.login-form__inputWrap input::placeholder {
+  color: var(--ink-3);
+}
+
+.login-form__eye {
+  cursor: pointer;
+}
+
+.login-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0 22px;
+}
+
+.login-form__remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.login-form__remember input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.login-form__forgot,
+.login-form__register a {
+  font-size: 13px;
+  color: var(--gold);
+}
+
+.login-form__forgot:hover,
+.login-form__register a:hover {
+  text-decoration: underline;
+}
+
+.login-form__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 48px;
+  background: var(--gold);
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(168, 124, 83, 0.19);
+  color: var(--white);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.login-form__submit:hover {
+  background: #966c46;
+}
+
+.login-form__divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 32px 0 24px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.login-form__divider::before,
+.login-form__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.login-form__social {
+  display: flex;
+  gap: 12px;
+}
+
+.login-form__social button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+  transition: border-color 0.2s;
+}
+
+.login-form__social button:hover {
+  border-color: var(--gold);
+}
+
+.login-form__register {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.login-form__register a {
+  font-weight: 600;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  .login {
+    flex-direction: column;
+  }
+
+  .login-brand {
+    min-height: 40vh;
+    padding: 32px 24px;
+  }
+
+  .login-brand__slogan h1 {
+    font-size: 26px;
+  }
+}

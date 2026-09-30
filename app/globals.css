@@ -1,0 +1,71 @@
+:root {
+  --bg: #f8f5ee;
+  --panel: #f1ebe0;
+  --paper: #faf8f3;
+  --ink: #1e1714;
+  --ink-2: #514842;
+  --ink-3: #8a7e77;
+  --gold: #a87c53;
+  --line: #e3dac9;
+  --active: #f5ecd8;
+  --white: #ffffff;
+
+  --font-serif: "Noto Serif", "Noto Serif SC", "Source Han Serif SC",
+    "Songti SC", SimSun, serif;
+  --font-sans: "Figtree", "PingFang SC", "Microsoft YaHei", system-ui,
+    sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg: #17130f;
+  --panel: #201a14;
+  --paper: #282019;
+  --ink: #ece5da;
+  --ink-2: #b8ac9f;
+  --ink-3: #7d7267;
+  --gold: #c89a6b;
+  --line: #382e24;
+  --active: #33291c;
+  --white: #2a221a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  background: none;
+}
+
+img {
+  display: block;
+}
+
+input {
+  font-family: inherit;
+  border: none;
+  outline: none;
+  background: transparent;
+}
