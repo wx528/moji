@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth";
-import { getBookForUser, getChapterTree } from "@/lib/books";
+import { getBookForUser, getChapterTree, getCards } from "@/lib/books";
 
 export async function GET(req) {
   const email = verifySession(req.cookies.get("moji_session")?.value);
@@ -12,5 +12,6 @@ export async function GET(req) {
   return NextResponse.json({
     book: { id: book.id, title: book.title },
     chapters: getChapterTree(book.id),
+    cards: getCards(book.id),
   });
 }

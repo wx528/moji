@@ -17,32 +17,6 @@ const toolbarIcons = [24, 25, 26, 27, 28, 29, 30, 31, 32, 33];
 const chapterIcons = { ch1: 14, ch2: 15, ch3: 16, ch4: 20, ch5: 21 };
 const sectionIcons = { sec31: 17, sec32: 18, sec33: 19 };
 
-const outlinePanels = [
-  {
-    title: "第三章主线",
-    items: [
-      "雷达失联，飞船进入不可测引力区，压抑氛围铺垫。",
-      "陈迹登场：性格、单镜、钢笔等关键设定自然带出。",
-      "通过航行日志完成与暗物质生命体的第一次无声接触。",
-    ],
-  },
-  {
-    title: "3.1–3.3 递进",
-    items: [
-      "3.1：跃迁引擎故障，团队内部矛盾初现。",
-      "3.2：单镜捕捉到“松节油斑斓”异象，科学线索埋设。",
-      "3.3：进入深渊前的抉择，章末钩子收束。",
-    ],
-  },
-  {
-    title: "第四章伏笔",
-    items: [
-      "暗物质生命体的动机留白。",
-      "航行日志中“星图画在心上”的隐喻回收。",
-    ],
-  },
-];
-
 function updateInTree(chapters, leafId, updater) {
   return chapters.map((ch) => {
     if (ch.id === leafId) return updater(ch);
@@ -72,6 +46,7 @@ function EditorInner() {
   const [theme, setTheme] = useState("light");
   const [collapsed, setCollapsed] = useState([]);
   const [todayWords, setTodayWords] = useState(0);
+  const [cards, setCards] = useState({ notes: [], outline: [] });
   const saveTimer = useRef(null);
   const editorRef = useRef(null);
 
@@ -109,6 +84,7 @@ function EditorInner() {
         if (!data) return;
         setBook(data.book);
         setChapters(data.chapters);
+        setCards(data.cards ?? { notes: [], outline: [] });
         setActive((prev) => {
           const stillThere = data.chapters.some(
             (c) =>
@@ -264,6 +240,54 @@ function EditorInner() {
     await fetch(`/api/chapters/${id}?permanent=1`, { method: "DELETE" });
     await fetchTrash();
     refreshTree();
+  }
+
+  // ===== 卡片笔记 / 剧情大纲 =====
+  const activeCards = activeTab === "notes" ? cards.notes : cards.outline;
+
+  function updateCardLocal(cardId, patch) {
+    setCards((prev) => ({
+      ...prev,
+      [activeTab]: prev[activeTab].map((c) => (c.id === cardId ? { ...c, ...patch } : c)),
+    }));
+  }
+
+  function handleCardBodyBlur(card, e) {
+    const body = e.currentTarget.innerText;
+    if (body === card.body) return;
+    updateCardLocal(card.id, { body });
+    fetch(`/api/cards/${card.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+  }
+
+  async function handleCardRename(card) {
+    const title = window.prompt("重命名卡片", card.title);
+    if (title === null || !title.trim() || title === card.title) return;
+    updateCardLocal(card.id, { title: title.trim() });
+    await fetch(`/api/cards/${card.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title.trim() }),
+    });
+  }
+
+  async function handleAddCard() {
+    const title = window.prompt("新卡片名称：", "未命名卡片");
+    if (title === null || !title.trim()) return;
+    const res = await fetch("/api/cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookId: book.id, tab: activeTab, title: title.trim() }),
+    });
+    const data = await res.json();
+    if (!data.ok) return;
+    setCards((prev) => ({
+      ...prev,
+      [activeTab]: [...prev[activeTab], { id: data.id, title: title.trim(), body: "" }],
+    }));
   }
 
   // ===== 拖拽排序 =====
@@ -648,68 +672,63 @@ function EditorInner() {
 
           {activeTab === "notes" ? (
             <div className="cards__list">
-              <section className="card">
-                <header className="card__head">
-                  <div className="card__title">
-                    <img src="/assets/2_56/34.svg" alt="" width="14" height="14" />
-                    <span>主要角色</span>
+              <button className="cards__add" onClick={handleAddCard} title="新增卡片">
+                ＋ 新增卡片
+              </button>
+              {activeCards.map((card) => (
+                <section className="card" key={card.id}>
+                  <header className="card__head">
+                    <div
+                      className="card__title"
+                      title="双击重命名"
+                      onDoubleClick={() => handleCardRename(card)}
+                    >
+                      <img src="/assets/2_56/34.svg" alt="" width="14" height="14" />
+                      <span>{card.title}</span>
+                    </div>
+                    <img src="/assets/2_56/35.svg" alt="更多" width="12" height="12" />
+                  </header>
+                  <hr className="card__divider" />
+                  <div
+                    className="card__body card__body--edit"
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    onBlur={(e) => handleCardBodyBlur(card, e)}
+                  >
+                    {card.body}
                   </div>
-                  <img src="/assets/2_56/35.svg" alt="更多" width="12" height="12" />
-                </header>
-                <hr className="card__divider" />
-                <div className="card__body">
-                  <h4>陈迹 (领航员)</h4>
-                  <p>
-                    探险队核心领航员，为人冷静偏执。右眼佩戴一个复古黄铜机械单单镜，能在强辐射环境中捕捉微弱的偏振光线。偏爱复古钢笔书写。
-                  </p>
-                </div>
-              </section>
-
-              <section className="card">
-                <header className="card__head">
-                  <div className="card__title">
-                    <img src="/assets/2_56/36.svg" alt="" width="14" height="14" />
-                    <span>剧情备忘</span>
-                  </div>
-                  <img src="/assets/2_56/37.svg" alt="更多" width="12" height="12" />
-                </header>
-                <hr className="card__divider" />
-                <ol className="card__memo">
-                  <li>
-                    <em>1.</em>
-                    <span>
-                      在这一章中段，利用航行日志引入“暗物质生命体”的第一次无声接触。
-                    </span>
-                  </li>
-                  <li>
-                    <em>2.</em>
-                    <span>
-                      强调单镜观察到的“松节油斑澜”异象，作为后文跃迁失效的科学线索。
-                    </span>
-                  </li>
-                </ol>
-              </section>
+                </section>
+              ))}
             </div>
           ) : (
             <div className="cards__list">
-              {outlinePanels.map((panel) => (
-                <section className="card" key={panel.title}>
+              <button className="cards__add" onClick={handleAddCard} title="新增卡片">
+                ＋ 新增卡片
+              </button>
+              {activeCards.map((card) => (
+                <section className="card" key={card.id}>
                   <header className="card__head">
-                    <div className="card__title">
+                    <div
+                      className="card__title"
+                      title="双击重命名"
+                      onDoubleClick={() => handleCardRename(card)}
+                    >
                       <img src="/assets/2_56/36.svg" alt="" width="14" height="14" />
-                      <span>{panel.title}</span>
+                      <span>{card.title}</span>
                     </div>
                     <img src="/assets/2_56/37.svg" alt="更多" width="12" height="12" />
                   </header>
                   <hr className="card__divider" />
-                  <ol className="card__memo">
-                    {panel.items.map((item, i) => (
-                      <li key={i}>
-                        <em>{i + 1}.</em>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ol>
+                  <div
+                    className="card__body card__body--edit"
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    onBlur={(e) => handleCardBodyBlur(card, e)}
+                  >
+                    {card.body}
+                  </div>
                 </section>
               ))}
             </div>

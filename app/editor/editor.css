@@ -678,6 +678,43 @@
   color: var(--ink-2);
 }
 
+.cards__add {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.cards__add:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.card__body--edit {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 20px;
+  cursor: text;
+}
+
+.card__body--edit:focus {
+  outline: none;
+  background: rgba(168, 124, 83, 0.06);
+  border-radius: 2px;
+}
+
+.card__body--edit:empty::before {
+  content: "点击填写内容……";
+  color: var(--ink-3);
+}
+
 .card__memo li {
   display: flex;
   gap: 6px;

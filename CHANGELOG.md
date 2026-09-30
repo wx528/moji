@@ -3,6 +3,16 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.3] - 2026-10-01
+
+### Added
+
+- **卡片笔记 / 剧情大纲真实数据化**：此前为静态占位内容，现每本书拥有独立卡片（`note_cards` 表，按 `book_id` 隔离）
+- 卡片内容可直接编辑（`contentEditable`，失焦自动保存）
+- 卡片标题双击重命名；每个 Tab 支持新增卡片
+- 旧书籍访问时自动惰性生成默认卡片（主要角色 / 剧情备忘 / 主线大纲 / 本章要点）
+- 新增 API：`POST /api/cards`、`PATCH /api/cards/[id]`，均校验书籍归属
+
 ## [0.1.2] - 2026-10-01
 
 ### Added
