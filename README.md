@@ -49,14 +49,26 @@
 # 1. 安装依赖
 npm install
 
-# 2. 启动开发服务器
+# 2. （可选）初始化演示数据：账号 demo@moji.app / moji123456
+npm run seed
+
+# 3. 启动开发服务器
 npm run dev
 
-# 3. 访问 http://localhost:3000
-#    在 /register 注册一个账号即可开始写作
+# 4. 访问 http://localhost:3000，用演示账号登录即可
 ```
 
-> 首次登录会自动创建一本示例书《星河漫游指南》（含 5 章 3 小节种子数据）。
+> 不跑 seed 也可以：直接在 `/register` 注册，首次登录会自动创建一本示例书
+> 《星河漫游指南》（含 5 章 3 小节种子数据）。
+
+### Seed 脚本
+
+```bash
+npm run seed              # 幂等：用户/书籍已存在则跳过
+npm run seed -- --reset   # 危险：清空 .data 后重新初始化
+```
+
+支持环境变量覆盖：`SEED_EMAIL`、`SEED_PASSWORD`、`SEED_NAME`。
 
 ### 环境变量（可选）
 
