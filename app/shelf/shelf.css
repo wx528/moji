@@ -180,10 +180,35 @@
 }
 
 .book-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
   transition: transform 0.2s;
+}
+
+.book-card__delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 10;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.book-card:hover .book-card__delete {
+  opacity: 1;
+}
+
+.book-card__delete:hover {
+  background: #b4453a;
 }
 
 .book-card:hover {

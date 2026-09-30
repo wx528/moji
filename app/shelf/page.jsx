@@ -29,6 +29,7 @@ export default function ShelfPage() {
     fetch("/api/books")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setBooks(data?.books ?? []))
+      .catch(() => setBooks([]))
       .finally(() => setLoading(false));
   }, []);
 
@@ -43,6 +44,19 @@ export default function ShelfPage() {
       .catch(() => setStats(null));
     loadBooks();
   }, [loadBooks]);
+
+  async function handleDeleteBook(e, book) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        `确定删除《${book.title}》吗？\n删除后书籍将从书架移除（章节内容保留在数据库中）。`
+      )
+    )
+      return;
+    await fetch(`/api/books/${book.id}`, { method: "DELETE" });
+    loadBooks();
+  }
 
   async function handleCreate() {
     const title = window.prompt("给新书起个名字：", "未命名新作");
@@ -129,6 +143,13 @@ export default function ShelfPage() {
               const cover = coverFor(b.id);
               return (
                 <Link className="book-card" href={`/editor?bookId=${b.id}`} key={b.id}>
+                  <button
+                    className="book-card__delete"
+                    title="删除这本书"
+                    onClick={(e) => handleDeleteBook(e, b)}
+                  >
+                    ×
+                  </button>
                   <div className="book-cover" style={{ background: cover.bg, "--accent": cover.accent }}>
                     <span className="book-cover__spine" />
                     <span className="book-cover__frame" />

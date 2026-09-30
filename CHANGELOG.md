@@ -3,6 +3,18 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.2] - 2026-10-01
+
+### Added
+
+- **书籍删除**：书架卡片悬停显示删除按钮，确认后软删除（`books.deleted` 列，章节内容保留在数据库中）
+- 已删除书籍从书架列表隐藏，且无法再通过 URL 直接打开
+- `lib/db.js` 启动时自动执行轻量列迁移（`ALTER TABLE ... ADD COLUMN`，幂等）
+
+### Fixed
+
+- 书架页数据请求失败（如 dev 热编译窗口期）时页面永久卡在“加载中”的问题，现在会降级为空列表
+
 ## [0.1.1] - 2026-10-01
 
 ### Added
