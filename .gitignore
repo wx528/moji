@@ -4,3 +4,5 @@ out
 *.log
 .data
 .codebuddy
+.env*
+!.env.example

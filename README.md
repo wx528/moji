@@ -2,7 +2,7 @@
 
 > 落笔成墨，行迹皆是星河。
 
-一个**全栈写作应用**，基于 Next.js 15 (App Router) + SQLite 构建。从 Figma 设计稿还原 UI，实现了完整的账号体系、多本书管理、章节编辑与写作统计。
+一个**全栈写作应用**，基于 Next.js 15 (App Router) + SQLite 构建。从 Figma 设计稿还原 UI，实现了完整的账号体系、多本书管理、章节编辑与写作统计，并内置可接入任意 OpenAI 兼容服务的 **AI 续写**。
 
 ![Tech](https://img.shields.io/badge/Next.js-15-black) ![React](https://img.shields.io/badge/React-19-blue) ![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-green)
 
@@ -43,6 +43,7 @@
 - **小节折叠/展开**：状态持久化到 localStorage
 - **回收站**：软删除 → 恢复 / 彻底删除
 - **卡片笔记 / 剧情大纲**：右侧面板双 Tab，每本书独立数据；卡片内容直接可编辑（`contentEditable`，失焦自动保存）、标题双击重命名、支持新增；旧书首次访问自动生成默认卡片（主要角色 / 剧情备忘 / 主线大纲 / 本章要点）
+- **AI 续写**：底部工具条「续写」按钮，AI 顺着上文在光标处流式逐字插入（SSE），字数可选 100 / 300 / 500，随时可停；插入走既有自动保存链路。续写时自动注入本书的**卡片笔记与剧情大纲**（世界书），确保人物、世界观与既定情节一致。支持任意 OpenAI 兼容服务（智谱 GLM / DeepSeek / Kimi / MiniMax / OpenAI），见[环境变量](#环境变量可选)
 - **实时字数**：本章 / 全书 / 今日新增三个维度实时更新
 - **Markdown 导出**：本章 / 全书一键下载
 
@@ -93,6 +94,22 @@ npm run seed -- --reset   # 危险：清空 .data 后重新初始化
 | 变量 | 说明 | 默认值 |
 |---|---|---|
 | `MOJI_SECRET` | 会话签名密钥 | 开发用默认值，**生产必须设置** |
+| `MOJI_AI_KEY` | AI 续写的服务密钥 | 未设置时点「续写」会提示配置 |
+| `MOJI_AI_MODEL` | 模型名（如 `glm-4-flash`、`deepseek-chat`） | 同上 |
+| `MOJI_AI_BASE` | OpenAI 兼容接口地址 | `https://open.bigmodel.cn/api/paas/v4`（智谱） |
+
+AI 续写配置写入项目根目录 `.env.local`（已被 git 忽略），改完重启 `npm run dev`：
+
+```bash
+# 智谱 GLM（有免费模型）
+MOJI_AI_BASE=https://open.bigmodel.cn/api/paas/v4
+MOJI_AI_KEY=你的key
+MOJI_AI_MODEL=glm-4-flash
+
+# 或 DeepSeek
+# MOJI_AI_BASE=https://api.deepseek.com
+# MOJI_AI_MODEL=deepseek-chat
+```
 
 ### 生产构建
 
@@ -115,6 +132,7 @@ npm start
 │   │   ├── books/             # 书籍列表 / 新建 / 删除（[id]）
 │   │   ├── chapters/          # 章节增删改 / 排序 / 恢复
 │   │   ├── cards/             # 卡片笔记新增 / 编辑（按书籍隔离）
+│   │   ├── ai/                # AI 续写（SSE 流式代理）
 │   │   ├── trash/             # 回收站列表
 │   │   └── stats/             # 写作统计
 │   └── globals.css            # 设计变量（亮/暗两套主题）
@@ -147,7 +165,7 @@ note_cards(id, book_id, tab, title, body, sort_order, updated_at)  -- 卡片笔�
 - [ ] 书架搜索
 - [ ] 回收站按书籍分组
 - [ ] 每日字数曲线细化（按小时）
-- [ ] 富文本工具条（底部悬浮工具栏目前为展示）
+- [ ] 富文本工具条（加粗/斜体等；底部悬浮工具栏目前仅有 AI 续写为功能位）
 
 ## 致谢
 

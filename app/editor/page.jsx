@@ -179,6 +179,94 @@ function EditorInner() {
     }, 800);
   }
 
+  // ===== AI 续写 =====
+  const [aiWords, setAiWords] = useState(300);
+  const [aiStreaming, setAiStreaming] = useState(false);
+  const [aiMsg, setAiMsg] = useState("");
+  const aiAbortRef = useRef(null);
+
+  function caretToEnd() {
+    const el = editorRef.current;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  async function handleContinue() {
+    if (aiStreaming) {
+      aiAbortRef.current?.abort();
+      return;
+    }
+    const el = editorRef.current;
+    if (!activeLeaf || !el) return;
+    setAiMsg("");
+
+    // 光标不在编辑区时，移到文末再续写
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !el.contains(sel.anchorNode)) caretToEnd();
+    el.focus();
+
+    setAiStreaming(true);
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+    try {
+      const res = await fetch("/api/ai/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: el.innerText,
+          bookId: book.id,
+          bookTitle: book.title,
+          chapterTitle: activeLeaf.title,
+          words: aiWords,
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setAiMsg(data?.error ?? `请求失败（${res.status}）`);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const frames = buf.split("\n\n");
+        buf = frames.pop() ?? "";
+        for (const frame of frames) {
+          const line = frame.trim();
+          if (!line.startsWith("data:")) continue;
+          let evt;
+          try {
+            evt = JSON.parse(line.slice(5));
+          } catch {
+            continue;
+          }
+          if (evt.error) {
+            setAiMsg(evt.error);
+            controller.abort();
+            return;
+          }
+          if (evt.done) return;
+          // 在光标处流式插入，触发 onInput → 走既有自动保存链路
+          if (evt.delta) document.execCommand("insertText", false, evt.delta);
+        }
+      }
+    } catch (e) {
+      if (e?.name !== "AbortError") setAiMsg("续写中断，请重试");
+    } finally {
+      setAiStreaming(false);
+      aiAbortRef.current = null;
+    }
+  }
+
   function selectLeaf(chapterId, sectionId = null) {
     setActive({ chapterId, sectionId });
   }
@@ -650,6 +738,32 @@ function EditorInner() {
             {toolbarIcons.map((n) => (
               <img key={n} src={`/assets/2_56/${n}.svg`} alt="" width="16" height="16" />
             ))}
+            <span className="toolbar__divider" />
+            <select
+              className="toolbar__aiWords"
+              value={aiWords}
+              onChange={(e) => setAiWords(Number(e.target.value))}
+              disabled={aiStreaming}
+              title="续写字数"
+            >
+              <option value={100}>100字</option>
+              <option value={300}>300字</option>
+              <option value={500}>500字</option>
+            </select>
+            <button
+              className="toolbar__aiBtn"
+              data-streaming={aiStreaming}
+              onClick={handleContinue}
+              disabled={!activeLeaf}
+              title={aiStreaming ? "停止续写" : "AI 续写：在光标处接着往下写"}
+            >
+              {aiStreaming ? "停止" : "续写"}
+            </button>
+            {aiMsg && (
+              <span className="toolbar__aiMsg" title={aiMsg}>
+                {aiMsg}
+              </span>
+            )}
           </div>
         </main>
 

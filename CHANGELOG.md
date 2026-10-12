@@ -3,6 +3,17 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 格式，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.4] - 2026-10-13
+
+### Added
+
+- **AI 续写**：编辑器底部工具条新增「续写」按钮，AI 在光标处流式接着往下写（SSE 逐字插入，随时可停）
+- 字数可选 100 / 300 / 500 字；插入自动走既有防抖保存链路，无需手动保存
+- 新增 API：`POST /api/ai/continue`（OpenAI 兼容接口转发，流式代理；未配置时返回友好提示）
+- **世界书注入**：续写时自动把本书的卡片笔记（世界观/角色设定）与剧情大纲注入上下文，人物性格、世界观规则、既定情节与设定严格一致（单卡截取 400 字，每组上限 2500 字）
+- 通过 `.env.local` 配置 `MOJI_AI_KEY` / `MOJI_AI_MODEL` / `MOJI_AI_BASE`，支持智谱 GLM / DeepSeek / Kimi / MiniMax / OpenAI 等任意兼容服务
+- `.gitignore` 增加 `.env*`，防止密钥误提交
+
 ## [0.1.3] - 2026-10-01
 
 ### Added
