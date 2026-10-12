@@ -8,6 +8,20 @@
 
 [更新日志](./CHANGELOG.md) · [Roadmap](#roadmap)
 
+## 界面预览
+
+**登录页**
+![登录页](public/screenshots/login.png)
+
+**书架（多本书 + 写作统计）**
+![书架](public/screenshots/shelf.png)
+
+**编辑器 · 亮色**
+![编辑器亮色](public/screenshots/editor.png)
+
+**编辑器 · 暗色模式**
+![编辑器暗色](public/screenshots/editor-dark.png)
+
 ## 功能一览
 
 ### 账号体系
@@ -18,6 +32,7 @@
 
 ### 书架（`/shelf`）
 - 多本书管理：新建、切换书籍，数据按用户隔离
+- **书籍删除**：卡片悬停显示删除按钮，确认后软删除（章节内容保留在数据库中），已删除书籍无法通过 URL 直接访问
 - **仿真书封面**：中式装帧设计（书脊、双线边框、书名首字印章、竖排书名），6 套墨系配色按书籍 ID 稳定分配
 - **写作统计**：今日新增 / 累计新增 / 近 14 天动笔天数 + 纯 CSS 柱状图（零图表依赖，暗色模式自适应）
 
@@ -27,6 +42,7 @@
 - **章节管理**：新建（➕）、双击重命名、拖拽排序（章节与小节各自独立排序，金色指示线）、移入回收站
 - **小节折叠/展开**：状态持久化到 localStorage
 - **回收站**：软删除 → 恢复 / 彻底删除
+- **卡片笔记 / 剧情大纲**：右侧面板双 Tab，每本书独立数据；卡片内容直接可编辑（`contentEditable`，失焦自动保存）、标题双击重命名、支持新增；旧书首次访问自动生成默认卡片（主要角色 / 剧情备忘 / 主线大纲 / 本章要点）
 - **实时字数**：本章 / 全书 / 今日新增三个维度实时更新
 - **Markdown 导出**：本章 / 全书一键下载
 
@@ -96,8 +112,9 @@ npm start
 │   ├── api/
 │   │   ├── auth/              # login / register / logout / me
 │   │   ├── book/              # 书籍 + 章节树（支持 ?bookId=）
-│   │   ├── books/             # 书籍列表 / 新建
+│   │   ├── books/             # 书籍列表 / 新建 / 删除（[id]）
 │   │   ├── chapters/          # 章节增删改 / 排序 / 恢复
+│   │   ├── cards/             # 卡片笔记新增 / 编辑（按书籍隔离）
 │   │   ├── trash/             # 回收站列表
 │   │   └── stats/             # 写作统计
 │   └── globals.css            # 设计变量（亮/暗两套主题）
@@ -114,21 +131,23 @@ npm start
 ## 数据模型
 
 ```
-books(id, user_email, title, created_at)
+books(id, user_email, title, created_at, deleted)          -- deleted：书架软删除
 chapters(id, book_id, parent_id, title, content, sort_order, deleted, deleted_at, updated_at)
-writing_stats(user_email, date, words)   -- 每日净增减字数
+writing_stats(user_email, date, words)                     -- 每日净增减字数
+note_cards(id, book_id, tab, title, body, sort_order, updated_at)  -- 卡片笔记（tab: notes/outline）
 ```
 
-- 章节删除为软删除（回收站），小节通过 `parent_id` 挂载
+- 章节与书籍删除均为软删除（回收站 / 数据保留），小节通过 `parent_id` 挂载
 - 写作统计在章节内容保存时按字数差记录，删字如实扣减
+- 旧库升级由 `lib/db.js` 启动时自动执行幂等列迁移（`ALTER TABLE ... ADD COLUMN`）
 
 ## Roadmap
 
 - [ ] 部署上线（Vercel + Turso 云数据库，或持久磁盘平台）
-- [ ] 书籍删除 / 书架搜索
+- [ ] 书架搜索
 - [ ] 回收站按书籍分组
 - [ ] 每日字数曲线细化（按小时）
-- [ ]富文本工具条（底部悬浮工具栏目前为展示）
+- [ ] 富文本工具条（底部悬浮工具栏目前为展示）
 
 ## 致谢
 
