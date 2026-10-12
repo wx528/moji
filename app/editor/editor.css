@@ -797,6 +797,156 @@
   color: var(--ink-2);
 }
 
+/* ===== AI 编排弹窗 ===== */
+.orchModal__panel {
+  width: min(620px, 100%);
+}
+
+.orchModal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.orchModal__field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.orchModal__field > span {
+  width: 88px;
+  flex-shrink: 0;
+}
+
+.orchModal__field select {
+  flex: 1;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.orchModal__field--col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.orchModal__field--col > span {
+  width: auto;
+}
+
+.orchModal__field textarea {
+  height: 64px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+}
+
+.orchModal__field textarea:focus,
+.orchModal__field select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.orchModal__hint {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+.orchModal__start,
+.orchModal__stop {
+  height: 34px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--gold);
+}
+
+.orchModal__start:hover {
+  filter: brightness(1.05);
+}
+
+.orchModal__stop {
+  background: #b4453a;
+}
+
+.orchModal__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  min-height: 0;
+}
+
+.orchModal__log {
+  max-height: 180px;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.orchModal__log li {
+  padding: 3px 0;
+  color: var(--ink-2);
+}
+
+.orchModal__log li[data-tone="head"] {
+  margin-top: 6px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.orchModal__log li[data-tone="ok"] {
+  color: #3d7a44;
+}
+
+.orchModal__log li[data-tone="warn"] {
+  color: #a3672a;
+}
+
+.orchModal__log li[data-tone="error"] {
+  color: #b4453a;
+}
+
+.orchModal__log li[data-tone="plan"] {
+  color: var(--ink);
+}
+
+.orchModal__preview {
+  max-height: 200px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--active);
+  font-family: var(--font-serif);
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: var(--ink);
+}
+
 /* ===== 右侧卡片面板 ===== */
 .cards {
   display: flex;

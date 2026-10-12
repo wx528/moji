@@ -306,6 +306,144 @@ function EditorInner() {
     }
   }
 
+  // ===== AI 编排（多轮长篇生成）=====
+  const [orchOpen, setOrchOpen] = useState(false);
+  const [orchRunning, setOrchRunning] = useState(false);
+  const [orchLog, setOrchLog] = useState([]); // [{key, text, tone}]
+  const [orchPreview, setOrchPreview] = useState("");
+  const [orchWords, setOrchWords] = useState(800);
+  const [orchRounds, setOrchRounds] = useState(1);
+  const [orchExtra, setOrchExtra] = useState("");
+  const orchAbortRef = useRef(null);
+
+  function pushOrchLog(text, tone = "info") {
+    setOrchLog((prev) => [...prev, { key: `${Date.now()}_${Math.random()}`, text, tone }]);
+  }
+
+  function openOrch() {
+    if (orchRunning) return;
+    setOrchLog([]);
+    setOrchPreview("");
+    setOrchOpen(true);
+  }
+
+  async function handleOrchestrate() {
+    setOrchRunning(true);
+    setOrchLog([]);
+    setOrchPreview("");
+    const addedLocal = [];
+    const controller = new AbortController();
+    orchAbortRef.current = controller;
+    try {
+      const res = await fetch("/api/ai/orchestrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookId: book.id,
+          words: orchWords,
+          rounds: orchRounds,
+          extra: orchExtra,
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        pushOrchLog(data?.error ?? `请求失败（${res.status}）`, "error");
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const frames = buf.split("\n\n");
+        buf = frames.pop() ?? "";
+        for (const frame of frames) {
+          const line = frame.trim();
+          if (!line.startsWith("data:")) continue;
+          let evt;
+          try {
+            evt = JSON.parse(line.slice(5));
+          } catch {
+            continue;
+          }
+          if (evt.error) {
+            pushOrchLog(evt.error, "error");
+            continue;
+          }
+          if (evt.aborted) {
+            pushOrchLog("已停止（已生成的章节会保留）", "warn");
+            continue;
+          }
+          if (evt.done) {
+            pushOrchLog("编排完成", "ok");
+            continue;
+          }
+          switch (evt.stage) {
+            case "ping":
+              break;
+            case "round":
+              setOrchPreview("");
+              pushOrchLog(`—— 第 ${evt.round}/${evt.total} 章 ——`, "head");
+              break;
+            case "sample":
+              pushOrchLog(
+                evt.titles.length
+                  ? `随机回顾：${evt.titles.join("、")}`
+                  : "暂无可回顾的旧章节，直接依据设定构思",
+                "info"
+              );
+              break;
+            case "summary":
+              pushOrchLog(`摘要完成（${evt.summaries.length} 份）`, "info");
+              break;
+            case "plan":
+              pushOrchLog(`梗概：《${evt.plan.title}》`, "plan");
+              if (evt.plan.twist) pushOrchLog(`变数：${evt.plan.twist}`, "plan");
+              break;
+            case "write":
+              if (evt.replace) setOrchPreview(evt.delta);
+              else setOrchPreview((p) => p + evt.delta);
+              break;
+            case "rewrite":
+              pushOrchLog("自检发现矛盾，按建议重写中…", "warn");
+              break;
+            case "check":
+              pushOrchLog(
+                evt.conflicts
+                  ? `设定自检：发现 ${evt.conflicts} 处矛盾`
+                  : "设定自检：未发现矛盾",
+                evt.conflicts ? "warn" : "ok"
+              );
+              break;
+            case "saved":
+              addedLocal.push({ id: evt.id, title: evt.title });
+              pushOrchLog(`已入库：《${evt.title}》（${formatWords(evt.words)} 字）`, "ok");
+              break;
+          }
+        }
+      }
+    } catch (e) {
+      if (e?.name === "AbortError") pushOrchLog("已停止（已生成的章节会保留）", "warn");
+      else pushOrchLog("编排中断，请重试", "error");
+    } finally {
+      setOrchRunning(false);
+      orchAbortRef.current = null;
+      await refreshTree();
+      if (addedLocal.length) {
+        const last = addedLocal[addedLocal.length - 1];
+        setActive({ chapterId: last.id, sectionId: null });
+      }
+      fetch("/api/stats")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((s) => s && setTodayWords(s.today))
+        .catch(() => {});
+    }
+  }
+
   function selectLeaf(chapterId, sectionId = null) {
     setActive({ chapterId, sectionId });
   }
@@ -808,6 +946,15 @@ function EditorInner() {
             >
               {checkLoading ? "停止" : "设定检查"}
             </button>
+            <span className="toolbar__divider" />
+            <button
+              className="toolbar__aiBtn"
+              data-streaming={orchRunning}
+              onClick={openOrch}
+              title="AI 编排：随机回顾旧章 → 规划梗概 → 自动撰写新章节"
+            >
+              {orchRunning ? "编排中…" : "AI 编排"}
+            </button>
             {aiMsg && (
               <span className="toolbar__aiMsg" title={aiMsg}>
                 {aiMsg}
@@ -898,6 +1045,95 @@ function EditorInner() {
           )}
         </aside>
       </div>
+
+      {/* ===== AI 编排弹窗 ===== */}
+      {orchOpen && (
+        <div className="checkModal orchModal" onClick={() => !orchRunning && setOrchOpen(false)}>
+          <div className="checkModal__panel orchModal__panel" onClick={(e) => e.stopPropagation()}>
+            <header className="checkModal__head">
+              <h3>AI 编排 · 长篇生成</h3>
+              <button
+                className="checkModal__close"
+                onClick={() => !orchRunning && setOrchOpen(false)}
+                aria-label="关闭"
+              >
+                ×
+              </button>
+            </header>
+
+            {!orchRunning && orchLog.length === 0 ? (
+              <div className="orchModal__form">
+                <label className="orchModal__field">
+                  <span>每章字数</span>
+                  <select
+                    value={orchWords}
+                    onChange={(e) => setOrchWords(Number(e.target.value))}
+                  >
+                    <option value={500}>约 500 字</option>
+                    <option value={800}>约 800 字</option>
+                    <option value={1200}>约 1200 字</option>
+                    <option value={2000}>约 2000 字</option>
+                  </select>
+                </label>
+                <label className="orchModal__field">
+                  <span>连写章数</span>
+                  <select
+                    value={orchRounds}
+                    onChange={(e) => setOrchRounds(Number(e.target.value))}
+                  >
+                    <option value={1}>1 章</option>
+                    <option value={2}>2 章</option>
+                    <option value={3}>3 章</option>
+                  </select>
+                </label>
+                <label className="orchModal__field orchModal__field--col">
+                  <span>补充要求（可选）</span>
+                  <textarea
+                    value={orchExtra}
+                    onChange={(e) => setOrchExtra(e.target.value)}
+                    maxLength={200}
+                    placeholder="例：让新角色在下一章登场；节奏放缓，偏重人物内心……"
+                  />
+                </label>
+                <p className="orchModal__hint">
+                  编排者会随机回顾旧章节摘要，结合世界书与大纲规划新章梗概（含变数方向）并撰写正文，与设定矛盾时自动重写一次。完成后章节自动入库，可随时修改或删除。
+                </p>
+                <button className="orchModal__start" onClick={handleOrchestrate}>
+                  开始编排
+                </button>
+              </div>
+            ) : (
+              <div className="orchModal__progress">
+                <ul className="orchModal__log">
+                  {orchLog.map((it) => (
+                    <li key={it.key} data-tone={it.tone}>
+                      {it.text}
+                    </li>
+                  ))}
+                </ul>
+                {orchPreview && (
+                  <pre className="orchModal__preview">
+                    {orchPreview.slice(-500)}
+                    {orchRunning ? " ▍" : ""}
+                  </pre>
+                )}
+                {orchRunning ? (
+                  <button
+                    className="orchModal__stop"
+                    onClick={() => orchAbortRef.current?.abort()}
+                  >
+                    停止
+                  </button>
+                ) : (
+                  <button className="orchModal__start" onClick={() => setOrchOpen(false)}>
+                    完成，关闭
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===== 世界观检查结果弹窗 ===== */}
       {checkOpen && checkResult && (
