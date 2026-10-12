@@ -267,6 +267,45 @@ function EditorInner() {
     }
   }
 
+  // ===== 世界观检查 =====
+  const [checkLoading, setCheckLoading] = useState(false);
+  const [checkOpen, setCheckOpen] = useState(false);
+  const [checkResult, setCheckResult] = useState(null);
+  const checkAbortRef = useRef(null);
+
+  async function handleCheck() {
+    if (checkLoading) {
+      checkAbortRef.current?.abort();
+      return;
+    }
+    const el = editorRef.current;
+    if (!activeLeaf || !el) return;
+    setAiMsg("");
+    setCheckLoading(true);
+    const controller = new AbortController();
+    checkAbortRef.current = controller;
+    try {
+      const res = await fetch("/api/ai/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: el.innerText, bookId: book.id }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setAiMsg(data?.error ?? `请求失败（${res.status}）`);
+        return;
+      }
+      setCheckResult(data);
+      setCheckOpen(true);
+    } catch (e) {
+      if (e?.name !== "AbortError") setAiMsg("检查中断，请重试");
+    } finally {
+      setCheckLoading(false);
+      checkAbortRef.current = null;
+    }
+  }
+
   function selectLeaf(chapterId, sectionId = null) {
     setActive({ chapterId, sectionId });
   }
@@ -759,6 +798,16 @@ function EditorInner() {
             >
               {aiStreaming ? "停止" : "续写"}
             </button>
+            <span className="toolbar__divider" />
+            <button
+              className="toolbar__aiBtn"
+              data-streaming={checkLoading}
+              onClick={handleCheck}
+              disabled={!activeLeaf}
+              title="世界观检查：对照设定卡与剧情大纲找冲突"
+            >
+              {checkLoading ? "停止" : "设定检查"}
+            </button>
             {aiMsg && (
               <span className="toolbar__aiMsg" title={aiMsg}>
                 {aiMsg}
@@ -849,6 +898,38 @@ function EditorInner() {
           )}
         </aside>
       </div>
+
+      {/* ===== 世界观检查结果弹窗 ===== */}
+      {checkOpen && checkResult && (
+        <div className="checkModal" onClick={() => setCheckOpen(false)}>
+          <div className="checkModal__panel" onClick={(e) => e.stopPropagation()}>
+            <header className="checkModal__head">
+              <h3>世界观检查</h3>
+              <button className="checkModal__close" onClick={() => setCheckOpen(false)} aria-label="关闭">
+                ×
+              </button>
+            </header>
+            <p className="checkModal__summary">{checkResult.summary}</p>
+            {checkResult.issues.length ? (
+              <ul className="checkModal__list">
+                {checkResult.issues.map((it, i) => (
+                  <li className="checkModal__item" data-sev={it.severity} key={i}>
+                    <div className="checkModal__itemHead">
+                      <span className="checkModal__sev">{it.severity}</span>
+                      <span className="checkModal__card">{it.card}</span>
+                    </div>
+                    {it.quote && <blockquote className="checkModal__quote">{it.quote}</blockquote>}
+                    <p className="checkModal__reason">{it.reason}</p>
+                    {it.suggestion && <p className="checkModal__sug">建议：{it.suggestion}</p>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="checkModal__ok">未发现与设定卡冲突的内容。</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

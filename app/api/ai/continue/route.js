@@ -1,5 +1,6 @@
 import { verifySession } from "@/lib/auth";
-import { getBookForUser, getCards } from "@/lib/books";
+import { getBookForUser } from "@/lib/books";
+import { buildLore } from "@/lib/lore";
 
 // OpenAI 兼容接口（GLM / DeepSeek / Kimi / OpenAI 均可），SSE 流式转发
 const BASE = (process.env.MOJI_AI_BASE || "https://open.bigmodel.cn/api/paas/v4").replace(/\/+$/, "");
@@ -46,17 +47,7 @@ export async function POST(req) {
   const bookId = String(body.bookId ?? "");
   if (bookId) {
     const book = getBookForUser(email, bookId);
-    if (book) {
-      const cards = getCards(book.id); // {notes: [...], outline: [...]}
-      const fmt = (list) =>
-        list
-          .map((c) => `《${c.title}》${String(c.body ?? "").trim().slice(0, 400)}`)
-          .join("\n");
-      const notes = (cards.notes ?? []).filter((c) => (c.body ?? "").trim());
-      const outline = (cards.outline ?? []).filter((c) => (c.body ?? "").trim());
-      if (notes.length) lore += `\n\n【设定卡 · 世界观/角色】\n${fmt(notes).slice(0, 2500)}`;
-      if (outline.length) lore += `\n\n【剧情大纲】\n${fmt(outline).slice(0, 2500)}`;
-    }
+    if (book) lore = buildLore(book);
   }
 
   const messages = [
