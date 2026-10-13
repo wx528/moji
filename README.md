@@ -6,7 +6,7 @@
 
 ![Tech](https://img.shields.io/badge/Next.js-15-black) ![React](https://img.shields.io/badge/React-19-blue) ![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-green)
 
-[更新日志](./CHANGELOG.md) · [Roadmap](#roadmap)
+[English](./README.en.md) · [更新日志](./CHANGELOG.md) · [Roadmap](#roadmap)
 
 ## 界面预览
 
