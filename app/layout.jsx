@@ -1,4 +1,5 @@
 import "./globals.css";
+import { MojiDialogHost } from "./moji-dialog";
 
 export const metadata = {
   title: "墨迹写作 MoJi",
@@ -16,7 +17,10 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <MojiDialogHost />
+      </body>
     </html>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { mojiConfirm, mojiPrompt } from "../moji-dialog";
 import "./shelf.css";
 
 const COVERS = [
@@ -48,18 +49,18 @@ export default function ShelfPage() {
   async function handleDeleteBook(e, book) {
     e.preventDefault();
     e.stopPropagation();
-    if (
-      !window.confirm(
-        `确定删除《${book.title}》吗？\n删除后书籍将从书架移除（章节内容保留在数据库中）。`
-      )
-    )
-      return;
+    const ok = await mojiConfirm({
+      label: `确定删除《${book.title}》吗？\n删除后书籍将从书架移除（章节内容保留在数据库中）。`,
+      confirmText: "删除",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/books/${book.id}`, { method: "DELETE" });
     loadBooks();
   }
 
   async function handleCreate() {
-    const title = window.prompt("给新书起个名字：", "未命名新作");
+    const title = await mojiPrompt({ label: "给新书起个名字：", initial: "未命名新作" });
     if (title === null || !title.trim()) return;
     setCreating(true);
     try {

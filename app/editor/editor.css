@@ -857,6 +857,10 @@
   resize: none;
 }
 
+.orchModal__field textarea.orchModal__planText {
+  height: 88px;
+}
+
 .orchModal__field textarea:focus,
 .orchModal__field select:focus {
   outline: none;

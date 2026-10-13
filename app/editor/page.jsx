@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { mojiConfirm, mojiPrompt } from "../moji-dialog";
 import "./editor.css";
 
 const countWords = (text) => (text ?? "").replace(/\s+/g, "").length;
@@ -306,13 +307,13 @@ function EditorInner() {
     }
   }
 
-  // ===== AI 编排（多轮长篇生成）=====
+  // ===== AI 编排（计划驱动的节级长篇生成）=====
   const [orchOpen, setOrchOpen] = useState(false);
   const [orchRunning, setOrchRunning] = useState(false);
   const [orchLog, setOrchLog] = useState([]); // [{key, text, tone}]
   const [orchPreview, setOrchPreview] = useState("");
   const [orchWords, setOrchWords] = useState(800);
-  const [orchRounds, setOrchRounds] = useState(1);
+  const [orchPlanText, setOrchPlanText] = useState("");
   const [orchExtra, setOrchExtra] = useState("");
   const orchAbortRef = useRef(null);
 
@@ -341,7 +342,7 @@ function EditorInner() {
         body: JSON.stringify({
           bookId: book.id,
           words: orchWords,
-          rounds: orchRounds,
+          planText: orchPlanText,
           extra: orchExtra,
         }),
         signal: controller.signal,
@@ -379,28 +380,60 @@ function EditorInner() {
             continue;
           }
           if (evt.done) {
-            pushOrchLog("编排完成", "ok");
+            pushOrchLog(
+              evt.arcsLeft > 0
+                ? `本节完成，还剩 ${evt.arcsLeft} 节未写——再次点「开始编排」继续下一节`
+                : "全书计划完成！可删除右侧「AI 生成计划」卡片后重新规划",
+              "ok"
+            );
             continue;
           }
           switch (evt.stage) {
             case "ping":
               break;
-            case "round":
+            case "planGen":
+              pushOrchLog("正在生成全书计划…", "info");
+              break;
+            case "plan":
+              pushOrchLog(
+                `全书计划：${evt.arcs.length} 节（${evt.arcs
+                  .map((a) => `${a.title}×${a.chapters}章`)
+                  .join("、")}）${evt.note ? ` — ${evt.note}` : ""}`,
+                "plan"
+              );
+              break;
+            case "planExists":
+              pushOrchLog(
+                `检测到已有计划：${evt.arcs.length} 节，${evt.arcs.filter((a) => a.done).length} 节已完成，从中断处继续`,
+                "plan"
+              );
+              break;
+            case "arc":
               setOrchPreview("");
-              pushOrchLog(`—— 第 ${evt.round}/${evt.total} 章 ——`, "head");
+              pushOrchLog(
+                `—— 第 ${evt.index}/${evt.total} 节《${evt.title}》（${evt.chapters} 章）——`,
+                "head"
+              );
               break;
             case "sample":
               pushOrchLog(
                 evt.titles.length
-                  ? `随机回顾：${evt.titles.join("、")}`
+                  ? `本节灵感池：随机回顾 ${evt.titles.join("、")}`
                   : "暂无可回顾的旧章节，直接依据设定构思",
                 "info"
               );
               break;
             case "summary":
-              pushOrchLog(`摘要完成（${evt.summaries.length} 份）`, "info");
+              pushOrchLog(`灵感摘要完成（${evt.summaries.length} 份），本节内共享`, "info");
               break;
-            case "plan":
+            case "resume":
+              pushOrchLog(`断点续跑：本节已有 ${evt.skip} 章，从第 ${evt.skip + 1} 章继续`, "warn");
+              break;
+            case "round":
+              setOrchPreview("");
+              pushOrchLog(`第 ${evt.round}/${evt.total} 章`, "info");
+              break;
+            case "beat":
               pushOrchLog(`梗概：《${evt.plan.title}》`, "plan");
               if (evt.plan.twist) pushOrchLog(`变数：${evt.plan.twist}`, "plan");
               break;
@@ -423,19 +456,38 @@ function EditorInner() {
               addedLocal.push({ id: evt.id, title: evt.title });
               pushOrchLog(`已入库：《${evt.title}》（${formatWords(evt.words)} 字）`, "ok");
               break;
+            case "arcdone":
+              pushOrchLog(`第 ${evt.index} 节完成，进度已写入计划卡片`, "ok");
+              break;
           }
         }
       }
     } catch (e) {
-      if (e?.name === "AbortError") pushOrchLog("已停止（已生成的章节会保留）", "warn");
-      else pushOrchLog("编排中断，请重试", "error");
+      if (e?.name === "AbortError")
+        pushOrchLog("已停止（已生成内容保留，再次开始可从断点续写）", "warn");
+      else pushOrchLog("编排中断，请重试（进度已保留，可直接续跑）", "error");
     } finally {
       setOrchRunning(false);
       orchAbortRef.current = null;
       await refreshTree();
       if (addedLocal.length) {
+        // 新章节是小节（挂在「第X节」下），需定位其父级才能正确选中
         const last = addedLocal[addedLocal.length - 1];
-        setActive({ chapterId: last.id, sectionId: null });
+        try {
+          const data = await fetch(`/api/book${bookId ? `?bookId=${bookId}` : ""}`).then((r) =>
+            r.ok ? r.json() : null
+          );
+          const parent = (data?.chapters ?? []).find(
+            (c) => c.id === last.id || c.sections?.some((s) => s.id === last.id)
+          );
+          if (parent) {
+            setActive(
+              parent.id === last.id
+                ? { chapterId: last.id, sectionId: null }
+                : { chapterId: parent.id, sectionId: last.id }
+            );
+          }
+        } catch {}
       }
       fetch("/api/stats")
         .then((r) => (r.ok ? r.json() : null))
@@ -461,7 +513,7 @@ function EditorInner() {
   }
 
   async function handleRename(leaf) {
-    const title = window.prompt("重命名", leaf.title);
+    const title = await mojiPrompt({ label: "重命名", initial: leaf.title });
     if (title === null || !title.trim() || title === leaf.title) return;
     setChapters((prev) => updateInTree(prev, leaf.id, (n) => ({ ...n, title })));
     await fetch(`/api/chapters/${leaf.id}`, {
@@ -472,7 +524,12 @@ function EditorInner() {
   }
 
   async function handleDelete(leaf) {
-    if (!window.confirm(`确定将「${leaf.title}」移入回收站吗？`)) return;
+    const ok = await mojiConfirm({
+      label: `确定将「${leaf.title}」移入回收站吗？`,
+      confirmText: "移入回收站",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/chapters/${leaf.id}`, { method: "DELETE" });
     if (leaf.id === active.chapterId || leaf.id === active.sectionId) {
       const first = chapters.find((c) => c.id !== leaf.id);
@@ -501,7 +558,12 @@ function EditorInner() {
   }
 
   async function handlePurge(id) {
-    if (!window.confirm("彻底删除后无法恢复，确定吗？")) return;
+    const ok = await mojiConfirm({
+      label: "彻底删除后无法恢复，确定吗？",
+      confirmText: "彻底删除",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/chapters/${id}?permanent=1`, { method: "DELETE" });
     await fetchTrash();
     refreshTree();
@@ -529,7 +591,7 @@ function EditorInner() {
   }
 
   async function handleCardRename(card) {
-    const title = window.prompt("重命名卡片", card.title);
+    const title = await mojiPrompt({ label: "重命名卡片", initial: card.title });
     if (title === null || !title.trim() || title === card.title) return;
     updateCardLocal(card.id, { title: title.trim() });
     await fetch(`/api/cards/${card.id}`, {
@@ -540,7 +602,7 @@ function EditorInner() {
   }
 
   async function handleAddCard() {
-    const title = window.prompt("新卡片名称：", "未命名卡片");
+    const title = await mojiPrompt({ label: "新卡片名称：", initial: "未命名卡片" });
     if (title === null || !title.trim()) return;
     const res = await fetch("/api/cards", {
       method: "POST",
@@ -1063,6 +1125,16 @@ function EditorInner() {
 
             {!orchRunning && orchLog.length === 0 ? (
               <div className="orchModal__form">
+                <label className="orchModal__field orchModal__field--col">
+                  <span>总体计划（首次必填，留空则续跑已有计划）</span>
+                  <textarea
+                    className="orchModal__planText"
+                    value={orchPlanText}
+                    onChange={(e) => setOrchPlanText(e.target.value)}
+                    maxLength={500}
+                    placeholder="例：写 5 大节、每节 10 章：第一节流亡与启程，第二节暗流与背叛……；或：续写 2 节，每节 5 章，围绕信号的真相展开"
+                  />
+                </label>
                 <label className="orchModal__field">
                   <span>每章字数</span>
                   <select
@@ -1075,28 +1147,19 @@ function EditorInner() {
                     <option value={2000}>约 2000 字</option>
                   </select>
                 </label>
-                <label className="orchModal__field">
-                  <span>连写章数</span>
-                  <select
-                    value={orchRounds}
-                    onChange={(e) => setOrchRounds(Number(e.target.value))}
-                  >
-                    <option value={1}>1 章</option>
-                    <option value={2}>2 章</option>
-                    <option value={3}>3 章</option>
-                  </select>
-                </label>
                 <label className="orchModal__field orchModal__field--col">
                   <span>补充要求（可选）</span>
                   <textarea
                     value={orchExtra}
                     onChange={(e) => setOrchExtra(e.target.value)}
                     maxLength={200}
-                    placeholder="例：让新角色在下一章登场；节奏放缓，偏重人物内心……"
+                    placeholder="例：节奏放缓，偏重人物内心；多用对话推进……"
                   />
                 </label>
                 <p className="orchModal__hint">
-                  编排者会随机回顾旧章节摘要，结合世界书与大纲规划新章梗概（含变数方向）并撰写正文，与设定矛盾时自动重写一次。完成后章节自动入库，可随时修改或删除。
+                  编排者按你的计划把全书拆成若干「大节」，本次生成第一个未完成的节：节开始时随机抽 2~3 章旧文建立本节灵感池（节内共享），
+                  逐章按计划出梗概（含变数方向）并撰写正文，与设定矛盾时自动重写一次，完成后写入「AI 生成计划」大纲卡片。
+                  中途停止进度保留，再次开始自动断点续写；一次跑完一节，想写下一节就再点一次。
                 </p>
                 <button className="orchModal__start" onClick={handleOrchestrate}>
                   开始编排
