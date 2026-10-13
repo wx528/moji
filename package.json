@@ -1,6 +1,6 @@
 {
-  "name": "writing-app",
-  "version": "0.1.0",
+  "name": "moji",
+  "version": "0.1.7",
   "private": true,
   "type": "module",
   "scripts": {
